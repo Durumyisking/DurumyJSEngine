@@ -1,0 +1,18 @@
+{
+  "name": "pixijs",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@pixi/graphics-extras": "^7.0.4",
+    "@pixi/loaders": "^6.5.8",
+    "pixi.js": "^7.0.4",
+    "yy-intersects": "^1.0.8"
+  }
+}
