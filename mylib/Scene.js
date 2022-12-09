@@ -1,3 +1,5 @@
+
+
 const Obj_Type = {
     Floor: 0,
     Player: 1,
@@ -10,6 +12,8 @@ const Obj_Type = {
 var Scene = (function (exports) {
     'use strict';
     this.arrGameObj = Array.from(new Array(Obj_Type.END), () => new Array(0));
+    this.Wintexture = PIXI.Texture.from('/DurumyJSEngine/images/bg/thekingsleap/Background/Windows/windows.png');
+    this.Farbgtexture = PIXI.Texture.from('/DurumyJSEngine/images/bg/thekingsleap/Background/Far/far_bg.png');
     //[Obj_Type.END][255];
 
     this.update = function() 
@@ -28,6 +32,8 @@ var Scene = (function (exports) {
     }
     this.render = function(container) 
     {
+        container.addChild(this.Farbgtexture);
+        container.addChild(this.Wintexture);
 
         for(var i =0; i< this.arrGameObj.length; ++i)
         {            
