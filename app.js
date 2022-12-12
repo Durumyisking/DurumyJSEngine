@@ -232,11 +232,23 @@ function Scene () {
         {
             for(var j =0; j< this.arrGameObj[i].length; ++j)
             {
+                if(this.arrGameObj[i][j].IsDead)
+                {                                    
+                    delete this.arrGameObj[i][j];
+                    this.arrGameObj[i].splice(j);                    
+                    continue;
+                }
+
                 if(this.arrGameObj[i][j] != null)
                     this.arrGameObj[i][j].update();
 
                 if(null != this.arrGameObj[i][j].Collider)
                     this.arrGameObj[i][j].Collider.update();
+
+                for(var k = 0; k < this.arrGameObj[i][j].Animations.length; ++k)
+                {
+                    this.arrGameObj[i][j].Animations[k].update();
+                }
             }
         }
     }
@@ -251,6 +263,7 @@ function Scene () {
         {            
             for(var j =0; j< this.arrGameObj[i].length; ++j)
             {
+
                 if(this.arrGameObj[i][j] != null)
                     this.arrGameObj[i][j].render(container);
 
@@ -269,7 +282,8 @@ function Cuphead()
     this.State = State.IDLE;
     this.Onfloor = false;
     this.vScale = Vec2(100, 100);
-    this.vDir = DIR.NONE;
+    this.vDir = DIR.R;
+    this.vDirTemp = DIR.R;
     this.fJumpTime = 0.0;
     this.fAttackDelay = 0.0;
 
@@ -333,9 +347,17 @@ function Cuphead()
 
         key_left.press = () => {
             this.vPos.x -= 5;
+            for(var i = 0; i<this.Animations.length; ++i)
+            {
+                this.Animations[i].Animsprite.scale.x = -1;
+            }
         };
         key_right.press = () => {
             this.vPos.x += 5;
+            for(var i = 0; i<this.Animations.length; ++i)
+            {
+                this.Animations[i].Animsprite.scale.x = 1;
+            }
         };
         key_c.press = () => { 
             this.State |= State.JUMP;          
@@ -360,19 +382,20 @@ function Cuphead()
 
         // dir oper
         //////////////////////////////////////////////////
+
         if(key_left.isDown)
         {
             this.vPos.x -= 5 * DT;
             this.vDir |= DIR.L;
             this.vDir &= ~DIR.R;
-            this.CurrentAnim.Animsprite.scale.x = -1;
+            this.vDirTemp = DIR.L;
         }
         if(key_right.isDown)
         {
             this.vPos.x += 5 * DT;
             this.vDir |= DIR.R;
             this.vDir &= ~DIR.L;
-            this.CurrentAnim.Animsprite.scale.x = 1;
+            this.vDirTemp = DIR.R;
         }
         if(key_up.isDown)
         {
@@ -383,22 +406,29 @@ function Cuphead()
             this.vDir |= DIR.D;
         }
 
-        // if(key_left.isUp)
-        // {
-        //     this.vDir &= ~DIR.L;
-        // }
-        // if(key_right.isUp)
-        // {
-        //     this.vDir &= ~DIR.R;
-        // }
         if(key_up.isUp)
         {
             this.vDir &= ~DIR.U;
+            this.vDir |= this.vDirTemp;
         }
         if(key_down.isUp)
         {
             this.vDir &= ~DIR.D;
+            this.vDir |= this.vDirTemp;
         }
+        if(key_left.isUp)
+        {
+            this.vDir &= ~DIR.L;
+        }
+        if(key_right.isUp)
+        {
+            this.vDir &= ~DIR.R;
+        }
+        if(key_up.isUp && key_down.isUp && key_left.isUp && key_right.isUp)
+        {
+            this.vDir |= this.vDirTemp;
+        } 
+
         /////////////////////////////////////////////////////
 
         if(key_left.isDown || key_right.isDown)
@@ -412,7 +442,6 @@ function Cuphead()
             this.State &= ~State.MOVE;          
         }   
 
-
         this.CurrentAnim.Animsprite.position.set(this.vPos.x, this.vPos.y + (this.vScale.y / 2));
 
     }
@@ -421,58 +450,59 @@ function Cuphead()
     {
         this.fAttackDelay += MS;
 
-        if(key_x.isDown)
-        {
-            if(this.fAttackDelay > 100)
-            {
-                this.CreateBullet(Vec2(this.vPos.x, this.vPos.y));
-                this.fAttackDelay = 0;
-            }
-        }
-
-
         key_x.press = () => {
             this.State |= State.ATTACK; 
-            if(this.fAttackDelay > 100)
-            {
-                var bulletDir = Vec2(0, 0);
-
-                switch(this.vDir)
-                {
-                    case DIR.U:
-                        bulletDir = Vec2(0, -1);
-                        break;
-                    case DIR.D:
-                        bulletDir = Vec2(0, 1);
-                        break;                       
-                    case DIR.L:
-                        bulletDir = Vec2(-1, 0);
-                        break;
-                    case DIR.R:
-                        bulletDir = Vec2(1, 0);
-                        break;  
-                    case DIR.U | DIR.L:
-                        bulletDir = Vec2(-1, -1);
-                        break;
-                    case DIR.U | DIR.R:
-                        bulletDir = Vec2(1, -1);
-                        break;  
-                    case DIR.D | DIR.L:
-                        bulletDir = Vec2(-1, 1);
-                        break;
-                    case DIR.D | DIR.R:
-                        bulletDir = Vec2(1, 1);
-                        break;  
-                }
-
-                this.CreateBullet(Vec2(this.vPos.x, this.vPos.y), bulletDir);
-                this.fAttackDelay = 0;
-            }
+            this.AttackOper();
         };
+
+        if(key_x.isDown)
+        {
+            this.AttackOper();
+        }
+
 
         if(key_x.isUp)
         {
             this.State &= ~State.ATTACK;          
+        }
+    }
+
+    this.AttackOper = function()
+    {
+        if(this.fAttackDelay > 300)
+        {
+            var bulletDir = Vec2(0, 0);
+
+            switch(this.vDir)
+            {
+                case DIR.U:
+                    bulletDir = Vec2(0, -1);
+                    break;
+                case DIR.D:
+                    bulletDir = Vec2(0, 1);
+                    break;                       
+                case DIR.L:
+                    bulletDir = Vec2(-1, 0);
+                    break;
+                case DIR.R:
+                    bulletDir = Vec2(1, 0);
+                    break;  
+                case DIR.U | DIR.L:
+                    bulletDir = Vec2(-1, -1);
+                    break;
+                case DIR.U | DIR.R:
+                    bulletDir = Vec2(1, -1);
+                    break;  
+                case DIR.D | DIR.L:
+                    bulletDir = Vec2(-1, 1);
+                    break;
+                case DIR.D | DIR.R:
+                    bulletDir = Vec2(1, 1);
+                    break;  
+            }
+
+            this.CreateBullet(Vec2(this.vPos.x + (bulletDir.x * 100), this.vPos.y + (bulletDir.y * 100) - 25), bulletDir, this.vDir);
+            this.fAttackDelay = 0;
         }
     }
 
@@ -497,54 +527,55 @@ function Cuphead()
         }
     }
 
-    this.CreateBullet = function(_vPos, _vDir)
+    this.CreateBullet = function(_vPos, _vDir, _vDirFlag)
     {
-        var bullet = new Bullet(_vPos, _vDir);
+        var bullet = new Bullet(_vPos, _vDir, _vDirFlag);
         GameScene.arrGameObj[Obj_Type.Bullet].push(bullet);
     }
 }
 
 
 
-function Bullet(_vPos, _vDir)
+function Bullet(_vPos, _vDir, _vDirFlag)
 {
     this.name = "Bullet";
-    this.vScale = Vec2(64, 32);
+    this.vScale = Vec2(32, 32);
     this.SetPos(_vPos.x, _vPos.y);
     this.vDir = _vDir;
+    this.vDirFlag = _vDirFlag;
     this.CreateAnimation("bullet_create", "/DurumyJSEngine/images/bullet/create/bullet_create_", 4, false);
     this.CreateAnimation("bullet", "/DurumyJSEngine/images/bullet/bullet/bullet_", 8, true);
-    this.CreateAnimation("bullet_dead", "/DurumyJSEngine/images/bullet/bullet/bullet_", 6, false);
+    this.CreateAnimation("bullet_dead", "/DurumyJSEngine/images/bullet/dead/bullet_dead_", 6, false);
     this.CreateCollider(this, this.vSclae);
+    for(var i =0; i<this.Animations.length; ++i)
+    {
+        this.Animations[i].Animsprite.anchor.set(0.5, 0.5);
+        this.Animations[i].Animsprite.animationSpeed = 2;
+    }
     this.playAnim("bullet_create");
+    this.playAnim("bullet");
 
 
     this.update = function()
     {
-        this.vPos.x = this.vPos.x * (5 * this.vDir.x * DT);
-        this.vPos.y = this.vPos.y * (5 * this.vDir.y * DT);
-
-        if(this.CurrentAnim.name == "bullet_create")
+        switch(this.vDirFlag)
         {
-            this.CurrentAnim.Animsprite.onComplete = () => {
-                this.changeAnim("bullet");
-            };    
+            case DIR.L:
+                this.CurrentAnim.Animsprite.scale.x = -1;
+                break;
         }
 
-        if(this.CurrentAnim.name == "bullet")
+        if(this.CurrentAnim.name == "bullet" && this.CurrentAnim.Animsprite.playing) // 발사 애니메이션 후
         {
-            this.CurrentAnim.onComplete = () => {
-                this.changeAnim("bullet_dead");
-            };    
+            this.vPos.x = this.vPos.x += (30 * this.vDir.x * DT);
+            this.vPos.y = this.vPos.y += (30 * this.vDir.y * DT);    
         }
 
         if(this.CurrentAnim.name == "bullet_dead")
-        {
-            this.CurrentAnim.onComplete = () => {
-                this.stopAnim();
-                //delete this;
-            };    
-        }
+            this.CurrentAnim.Animsprite.onComplete = () => {
+                this.IsDead = true;
+        };    
+
         this.CurrentAnim.Animsprite.position.set(this.vPos.x, this.vPos.y + (this.vScale.y / 2));
     }
     this.render = function(container) 
@@ -571,18 +602,13 @@ function Bullet(_vPos, _vDir)
 function Floor()
 {
     this.name = "Floor";
-    // this.texture = PIXI.Texture.from('/DurumyJSEngine/images/bg/floor.png');
-    // this.sprite = new PIXI.Sprite(this.texture);
     this.vScale = Vec2(2048, 64);
-    // this.sprite.anchor.set(0.5, 1);
 
     this.update = function() 
     {
-        // this.sprite.position.set(this.vPos.x, this.vPos.y + (this.vScale.y / 2));
     }
     this.render = function(container) 
     {
-        // container.addChild(this.sprite);
     }
 
 }
@@ -599,6 +625,7 @@ function Animation(_Owner, _Name, _MaxFrame, _loop)
 
     this.playAnim = function() 
     {
+        console.log(this);
         app.stage.addChild(this.Animsprite);
         this.Animsprite.play();
         this.Animsprite.animationSpeed = 0.25;
@@ -616,7 +643,17 @@ function Animation(_Owner, _Name, _MaxFrame, _loop)
         this.Animsprite.position.set(_x, _y + (this.Owner.vScale.y / 2));
         this.Animsprite.anchor.set(0.5, 1);
         this.Animsprite.loop = this.loop;
+    }
 
+    this.update = function() 
+    {
+        if(!this.loop)
+        {
+            this.Animsprite.onComplete = () => {
+                this.stopAnim();
+                delete this;
+            };    
+        }
     }
 }
 
@@ -628,29 +665,39 @@ function Collider(_Owner, _Scale)
     this.vPos = this.Owner.vPos;
     this.vScale = _Scale;
     this.rect = null;
+    this.IsOn = true;
 
     this.update = function() 
     {
-        this.vPos = Vec2(this.Owner.vPos.x, this.Owner.vPos.y);
+        if(this.IsOn)
+        {
+            this.vPos = Vec2(this.Owner.vPos.x, this.Owner.vPos.y);
+        }
 //        this.rect.position.set(this.vPos.x, this.vPos.y)
     }
     this.render = function(container) 
     {
-        container.addChild(this.rect);
+        if(this.IsOn)
+        {
+            container.addChild(this.rect);
+        }
     }
 
     this.OnCollisionEnter = function(_Other) 
     {
-        this.Owner.OnCollisionEnter(_Other);
+        if(this.IsOn)
+            this.Owner.OnCollisionEnter(_Other);        
     }
     this.OnCollision = function(_Other) 
     {
-        this.Owner.OnCollision(_Other);
+        if(this.IsOn)
+            this.Owner.OnCollision(_Other);
     }
 
     this.OnCollisionExit = function(_Other) 
     {
-        this.Owner.OnCollisionExit(_Other);
+        if(this.IsOn)
+            this.Owner.OnCollisionExit(_Other);
     }
 
 }
@@ -703,6 +750,8 @@ function CollisionMgr(_GameScene)
                 // set = map에 데이터 저장
                 // get = key에따른 value 획득
 
+                if(!colA.IsOn || !colB.IsOn)
+                    continue;
 
                 var iter =  this.mapColInfo[Symbol.iterator](); // 충돌정보가 없으면 undefined를 가져가겠져 // 해당 위치의 iterator를 반환하도록 받아야함
                 
