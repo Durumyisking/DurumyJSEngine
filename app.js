@@ -39,10 +39,11 @@ app.stage.addChild(renderContainer);
 
 // enum
 const State = {
-    IDLE: 0,
-    MOVE: 1,
-    JUMP : 2,
-    ATTACK: 4,
+    NONE: 0,
+    IDLE: 1,
+    MOVE: 2,
+    JUMP : 4,
+    ATTACK: 8,
 }
 const DIR = {
     NONE: 0,
@@ -60,7 +61,8 @@ const DIR = {
   key_space = keyboardMgr(" "),
   key_z = keyboardMgr("z"),
   key_x = keyboardMgr("x"),
-  key_c = keyboardMgr("c");
+  key_c = keyboardMgr("c"),
+  key_s = keyboardMgr("s");
 
 /** _target의 x y에 Sprite 추가 */
 function addSprite(_target , _texture, _x, _y)
@@ -182,7 +184,7 @@ function GameObj () {
     {
         this.Collider = new Collider(this, Vec2(_x, _y));
         this.Collider.rect = new Graphics();
-        this.Collider.rect.beginFill(0, 0.05)
+        this.Collider.rect.beginFill(0, 0.5)
         .drawRect(this.vPos.x - (_x / 2) , this.vPos.y - (_y / 2), _x, _y)
         .endFill();
     }
@@ -206,8 +208,9 @@ function GameObj () {
 
 const Obj_Type = {
     Floor: 0,
-    Player: 1,
-    Bullet: 2,
+    Wall: 1,
+    Player: 2,
+    Bullet: 3,
     END: 10,
 }
 
@@ -233,7 +236,7 @@ function Scene () {
             for(var j =0; j< this.arrGameObj[i].length; ++j)
             {
                 if(this.arrGameObj[i][j].IsDead)
-                {                                    
+                {
                     delete this.arrGameObj[i][j];
                     this.arrGameObj[i].splice(j);                    
                     continue;
@@ -286,6 +289,8 @@ function Cuphead()
     this.vDirTemp = DIR.R;
     this.fJumpTime = 0.0;
     this.fAttackDelay = 0.0;
+    this.bStand = false;
+    this.bWatchRight = true;
 
     this.update = function() 
     {
@@ -344,39 +349,65 @@ function Cuphead()
 
     this.Move = function ()
     {
-
         key_left.press = () => {
-            this.vPos.x -= 5;
-            for(var i = 0; i<this.Animations.length; ++i)
-            {
-                this.Animations[i].Animsprite.scale.x = -1;
-            }
+            if(!this.bStand)
+                this.vPos.x -= 5 * DT;
+                for(var i = 0; i<this.Animations.length; ++i)
+                {
+                    this.Animations[i].Animsprite.scale.x = -1;
+                    this.bWatchRight = false;
+                }
+            
         };
         key_right.press = () => {
-            this.vPos.x += 5;
-            for(var i = 0; i<this.Animations.length; ++i)
-            {
-                this.Animations[i].Animsprite.scale.x = 1;
-            }
+            if(!this.bStand)
+                this.vPos.x += 5 * DT;
+                for(var i = 0; i<this.Animations.length; ++i)
+                {
+                    this.Animations[i].Animsprite.scale.x = 1;
+                    this.bWatchRight = true;
+                }
+            
         };
         key_c.press = () => { 
-            this.State |= State.JUMP;          
-        };
+            if(!this.bStand)          
+                this.State |= State.JUMP;          
+        };        
+
+        if(this.Onfloor)
+            if(key_s.isDown)
+            {
+                this.State &= ~State.MOVE;   
+                this.State &= ~State.JUMP;   
+                this.bStand = true;          
+            }
         
-        if(((this.State & State.ATTACK) == State.ATTACK) && !((this.State & State.JUMP) == State.JUMP) && !((this.State & State.MOVE) == State.MOVE))
+        if(key_s.isUp)
+            this.bStand = false;
+
+        if(((this.State & State.ATTACK) == State.ATTACK) && !((this.State & State.JUMP) == State.JUMP))
         {            
             if(key_up.isDown)
             {
-                cuphead.changeAnim("cuphead_aim_up");
+                if(this.bStand && (key_left.isDown || key_right.isDown))
+                    cuphead.changeAnim("cuphead_aim_diagonal_up");
+                else if((this.State & State.MOVE) == State.MOVE)
+                    cuphead.changeAnim("cuphead_run_shoot_diagonal");
+                else
+                    cuphead.changeAnim("cuphead_aim_up");
             }
             if(key_down.isDown)
             {
-                cuphead.changeAnim("cuphead_aim_down");
+                if(this.bStand && (key_left.isDown || key_right.isDown))
+                    cuphead.changeAnim("cuphead_aim_diagonal_down");
+                else
+                    cuphead.changeAnim("cuphead_aim_down");
             }
-
+            
             if(key_up.isUp && key_down.isUp)
             {
-                cuphead.changeAnim("cuphead_aim_str");
+                if(!(this.State & State.MOVE) == State.MOVE)
+                    cuphead.changeAnim("cuphead_aim_str");
             }
         }
 
@@ -385,14 +416,18 @@ function Cuphead()
 
         if(key_left.isDown)
         {
-            this.vPos.x -= 5 * DT;
+            if(!this.bStand)
+                this.vPos.x -= 5 * DT;
+            
             this.vDir |= DIR.L;
             this.vDir &= ~DIR.R;
             this.vDirTemp = DIR.L;
         }
         if(key_right.isDown)
         {
-            this.vPos.x += 5 * DT;
+            if(!this.bStand)
+                this.vPos.x += 5 * DT;
+            
             this.vDir |= DIR.R;
             this.vDir &= ~DIR.L;
             this.vDirTemp = DIR.R;
@@ -433,14 +468,24 @@ function Cuphead()
 
         if(key_left.isDown || key_right.isDown)
         {
-            this.State |= State.MOVE;          
+            if(!this.bStand)
+                this.State |= State.MOVE;          
         }
 
 
         if(key_left.isUp && key_right.isUp)
         {
             this.State &= ~State.MOVE;          
-        }   
+        }
+
+        if(key_up.isUp && key_down.isUp && key_left.isUp && key_right.isUp && key_x.isUp && key_c.isUp)
+        {
+            this.State = State.IDLE;
+        }
+        else
+        {
+            this.State &= ~State.IDLE;
+        }
 
         this.CurrentAnim.Animsprite.position.set(this.vPos.x, this.vPos.y + (this.vScale.y / 2));
 
@@ -472,20 +517,30 @@ function Cuphead()
         if(this.fAttackDelay > 300)
         {
             var bulletDir = Vec2(0, 0);
-
+            var vOffset = Vec2(0, 0);
             switch(this.vDir)
             {
                 case DIR.U:
                     bulletDir = Vec2(0, -1);
+                    if(this.bWatchRight)
+                        vOffset = Vec2(30, -35);                    
+                    else
+                        vOffset = Vec2(-30, -35);                    
                     break;
                 case DIR.D:
                     bulletDir = Vec2(0, 1);
+                    if(this.bWatchRight)
+                        vOffset = Vec2(30, -35);                    
+                    else
+                        vOffset = Vec2(-30, -35);                    
                     break;                       
                 case DIR.L:
                     bulletDir = Vec2(-1, 0);
+                    vOffset = Vec2(0, -35);                    
                     break;
                 case DIR.R:
                     bulletDir = Vec2(1, 0);
+                    vOffset = Vec2(0, -35);                    
                     break;  
                 case DIR.U | DIR.L:
                     bulletDir = Vec2(-1, -1);
@@ -498,10 +553,10 @@ function Cuphead()
                     break;
                 case DIR.D | DIR.R:
                     bulletDir = Vec2(1, 1);
-                    break;  
+                    break;
             }
 
-            this.CreateBullet(Vec2(this.vPos.x + (bulletDir.x * 100), this.vPos.y + (bulletDir.y * 100) - 25), bulletDir, this.vDir);
+            this.CreateBullet(Vec2(this.vPos.x + (bulletDir.x * 75) + vOffset.x, this.vPos.y + (bulletDir.y * 100) + vOffset.y), bulletDir, this.vDir);
             this.fAttackDelay = 0;
         }
     }
@@ -543,14 +598,49 @@ function Bullet(_vPos, _vDir, _vDirFlag)
     this.SetPos(_vPos.x, _vPos.y);
     this.vDir = _vDir;
     this.vDirFlag = _vDirFlag;
+    this.Animations= [];
     this.CreateAnimation("bullet_create", "/DurumyJSEngine/images/bullet/create/bullet_create_", 4, false);
     this.CreateAnimation("bullet", "/DurumyJSEngine/images/bullet/bullet/bullet_", 8, true);
     this.CreateAnimation("bullet_dead", "/DurumyJSEngine/images/bullet/dead/bullet_dead_", 6, false);
     this.CreateCollider(this, this.vSclae);
     for(var i =0; i<this.Animations.length; ++i)
     {
+        this.Animations[i].Animsprite.animationSpeed = 5;
+        this.Animations[i].Animsprite.scale.set(0.5);
         this.Animations[i].Animsprite.anchor.set(0.5, 0.5);
-        this.Animations[i].Animsprite.animationSpeed = 2;
+
+        if((this.vDirFlag & DIR.L) == DIR.L)
+        {
+            this.Animations[i].Animsprite.scale.x = -0.5;
+            if((this.vDirFlag & DIR.U) == DIR.U)
+            {
+                this.Animations[i].Animsprite.angle += 45;
+            }
+            else if((this.vDirFlag & DIR.D) == DIR.D)
+            {
+                this.Animations[i].Animsprite.angle -= 45;
+            }
+        }
+        else if((this.vDirFlag & DIR.R) == DIR.R)
+        {
+            this.Animations[i].Animsprite.scale.x = 0.5;
+            if((this.vDirFlag & DIR.U) == DIR.U)
+            {
+                this.Animations[i].Animsprite.angle -= 45;
+            }
+            else if((this.vDirFlag & DIR.D) == DIR.D)
+            {
+                this.Animations[i].Animsprite.angle += 45;
+            }
+        }
+        else if(this.vDirFlag == DIR.U)
+        {
+            this.Animations[i].Animsprite.angle -= 90;
+        }
+        else if(this.vDirFlag == DIR.D)
+        {
+            this.Animations[i].Animsprite.angle += 90;
+        }
     }
     this.playAnim("bullet_create");
     this.playAnim("bullet");
@@ -558,25 +648,22 @@ function Bullet(_vPos, _vDir, _vDirFlag)
 
     this.update = function()
     {
-        switch(this.vDirFlag)
+        if(null != this.CurrentAnim)
         {
-            case DIR.L:
-                this.CurrentAnim.Animsprite.scale.x = -1;
-                break;
+            if(this.CurrentAnim.name == "bullet" && this.CurrentAnim.Animsprite.loop) // 발사 애니메이션 후
+            {
+                this.vPos.x = this.vPos.x += (30 * this.vDir.x * DT);
+                this.vPos.y = this.vPos.y += (30 * this.vDir.y * DT);    
+            }
+    
+            if(this.CurrentAnim.name == "bullet_dead")
+                this.CurrentAnim.Animsprite.onComplete = () => {
+                    this.IsDead = true;
+                };    
+            if(!this.CurrentAnim.Animsprite.destroyed)
+                this.CurrentAnim.Animsprite.position.set(this.vPos.x, this.vPos.y + (this.vScale.y / 2));    
+            console.log(this.CurrentAnim);
         }
-
-        if(this.CurrentAnim.name == "bullet" && this.CurrentAnim.Animsprite.playing) // 발사 애니메이션 후
-        {
-            this.vPos.x = this.vPos.x += (30 * this.vDir.x * DT);
-            this.vPos.y = this.vPos.y += (30 * this.vDir.y * DT);    
-        }
-
-        if(this.CurrentAnim.name == "bullet_dead")
-            this.CurrentAnim.Animsprite.onComplete = () => {
-                this.IsDead = true;
-        };    
-
-        this.CurrentAnim.Animsprite.position.set(this.vPos.x, this.vPos.y + (this.vScale.y / 2));
     }
     this.render = function(container) 
     {
@@ -584,7 +671,7 @@ function Bullet(_vPos, _vDir, _vDirFlag)
 
     this.OnCollisionEnter = function(_Other) 
     {
-        if(_Other.Owner.name == "Floor")
+        if(_Other.Owner.name == "Floor" || _Other.Owner.name == "Wall")
         {
             this.changeAnim("bullet_dead");
         }
@@ -610,9 +697,19 @@ function Floor()
     this.render = function(container) 
     {
     }
-
 }
+function Wall(_vScale)
+{
+    this.name = "Wall";
+    this.vScale = _vScale;
 
+    this.update = function() 
+    {
+    }
+    this.render = function(container) 
+    {
+    }
+}
 
 function Animation(_Owner, _Name, _MaxFrame, _loop)
 {
@@ -625,7 +722,6 @@ function Animation(_Owner, _Name, _MaxFrame, _loop)
 
     this.playAnim = function() 
     {
-        console.log(this);
         app.stage.addChild(this.Animsprite);
         this.Animsprite.play();
         this.Animsprite.animationSpeed = 0.25;
@@ -633,9 +729,17 @@ function Animation(_Owner, _Name, _MaxFrame, _loop)
 
     this.stopAnim = function() 
     {
-        app.stage.removeChild(this.Animsprite);
         this.Animsprite.stop();
+        app.stage.removeChild(this.Animsprite);
     }
+
+    this.destroyAnim = function() 
+    {
+        this.Animsprite.destroy();
+        app.stage.removeChild(this.Animsprite);
+        //this.Owner.CurrentAnim = null;
+    }
+
 
     this.CreateAnim = function(_x, _y)
     {
@@ -650,8 +754,7 @@ function Animation(_Owner, _Name, _MaxFrame, _loop)
         if(!this.loop)
         {
             this.Animsprite.onComplete = () => {
-                this.stopAnim();
-                delete this;
+                this.destroyAnim();
             };    
         }
     }
@@ -857,6 +960,7 @@ function CollisionMgr(_GameScene)
 
 Cuphead.prototype = new GameObj();
 Floor.prototype = new GameObj();
+Wall.prototype = new GameObj();
 Bullet.prototype = new GameObj();
 
 
@@ -867,25 +971,44 @@ var collisionMgr = new CollisionMgr(GameScene);
 // ObjInit
 var cuphead = new Cuphead();
 cuphead.SetPos(100, 100);
-cuphead.CreateCollider(100, 100);
+cuphead.CreateCollider(100, 100)
+;
 var floor = new Floor();
 floor.SetPos(512, 700);
 floor.CreateCollider(2048, 64);
+
+var wallTop = new Wall(Vec2(2048, 64));
+wallTop.SetPos(512, 30);
+wallTop.CreateCollider(2048, 64);
+
+var wallLeft = new Wall(Vec2(50, 1024));
+wallLeft.SetPos(100, 350);
+wallLeft.CreateCollider(50, 1024);
+
+var wallRight = new Wall(Vec2(50, 1024));
+wallRight.SetPos(1300, 350);
+wallRight.CreateCollider(50, 1024);
 
 
 // 애니메이션 추가
 cuphead.CreateAnimation("cuphead_idle", "/DurumyJSEngine/images/cuphead_idle/cuphead_idle_", 9 , true);
 cuphead.CreateAnimation("cuphead_run", "/DurumyJSEngine/images/cuphead_run/cuphead_run_", 16, true);
 cuphead.CreateAnimation("cuphead_run_shoot_str", "/DurumyJSEngine/images/cuphead_run/shooting/cuphead_run_shoot_", 16, true);
+cuphead.CreateAnimation("cuphead_run_shoot_diagonal", "/DurumyJSEngine/images/cuphead_run/shooting/diagonal/cuphead_run_shoot_diagonal_up_", 16, true);
 cuphead.CreateAnimation("cuphead_jump", "/DurumyJSEngine/images/cuphead_jump/cuphead_jump_", 8, true);
 cuphead.CreateAnimation("cuphead_aim_str", "/DurumyJSEngine/images/cuphead_aim/Straight/cuphead_aim_straight_", 5, true);
 cuphead.CreateAnimation("cuphead_aim_up", "/DurumyJSEngine/images/cuphead_aim/Up/cuphead_aim_up_", 5, true);
 cuphead.CreateAnimation("cuphead_aim_down", "/DurumyJSEngine/images/cuphead_aim/Down/cuphead_aim_down_", 5, true);
+cuphead.CreateAnimation("cuphead_aim_diagonal_up", "/DurumyJSEngine/images/cuphead_aim/DiagonalUp/cuphead_aim_diagonal_up_", 5, true);
+cuphead.CreateAnimation("cuphead_aim_diagonal_down", "/DurumyJSEngine/images/cuphead_aim/DiagonalDown/cuphead_aim_diagonal_down_", 5, true);
 
 cuphead.playAnim("cuphead_idle");
 
 // OBj추가
 GameScene.arrGameObj[Obj_Type.Floor].push(floor);
+GameScene.arrGameObj[Obj_Type.Wall].push(wallTop);
+GameScene.arrGameObj[Obj_Type.Wall].push(wallLeft);
+GameScene.arrGameObj[Obj_Type.Wall].push(wallRight);
 GameScene.arrGameObj[Obj_Type.Player].push(cuphead);
 
 
