@@ -127,7 +127,10 @@ function GameObj () {
     this.update = function() 
     {
         if(null != this.CurrentAnim)
-            this.CurrentAnim.Animsprite.position.set(this.vPos.x, this.vPos.y);
+        {
+            if(!this.CurrentAnim.IsFinish)
+                this.CurrentAnim.Animsprite.position.set(this.vPos.x, this.vPos.y);
+        }
 
     }
     this.render = function(container) 
@@ -226,7 +229,10 @@ function Scene () {
     this.Farbgsprite = new PIXI.Sprite(this.Farbgtexture);
     this.Columnsprite = new PIXI.Sprite(this.Columntexture);
     this.Mainsprite = new PIXI.Sprite(this.Maintexture);
-
+    this.Farbgsprite.scale.set(1.5);
+    this.Farbgsprite.x += 442;
+    this.Farbgsprite.y += 40;
+//    this.Columnsprite.x += 300;
     //[Obj_Type.END][255];
 
     this.update = function() 
@@ -235,10 +241,22 @@ function Scene () {
         {
             for(var j =0; j< this.arrGameObj[i].length; ++j)
             {
+
                 if(this.arrGameObj[i][j].IsDead)
                 {
+                    if(null != this.arrGameObj[i][j].Collider)
+                        delete this.arrGameObj[i][j].Collider;
+
+                    // if(!this.arrGameObj[i][j].Animations.empty)
+                    // {
+                    //     for (var k =0; k<this.arrGameObj[i][j].Animations.length; ++k)
+                    //     {
+                    //         delete this.arrGameObj[i][j];
+                    //         this.arrGameObj[i][j].Animations.splice(k);
+                    //     }
+                    // }
                     delete this.arrGameObj[i][j];
-                    this.arrGameObj[i].splice(j);                    
+                    this.arrGameObj[i].splice(j, 1);                    
                     continue;
                 }
 
@@ -248,9 +266,13 @@ function Scene () {
                 if(null != this.arrGameObj[i][j].Collider)
                     this.arrGameObj[i][j].Collider.update();
 
-                for(var k = 0; k < this.arrGameObj[i][j].Animations.length; ++k)
+                if(!this.arrGameObj[i][j].Animations.empty)
                 {
-                    this.arrGameObj[i][j].Animations[k].update();
+                    for(var k = 0; k < this.arrGameObj[i][j].Animations.length; ++k)
+                    {
+                        if(!this.arrGameObj[i][j].Animations[k].IsFinish)
+                            this.arrGameObj[i][j].Animations[k].update();
+                    }        
                 }
             }
         }
@@ -266,6 +288,8 @@ function Scene () {
         {            
             for(var j =0; j< this.arrGameObj[i].length; ++j)
             {
+                if(this.arrGameObj[i][j].IsDead)
+                    continue;
 
                 if(this.arrGameObj[i][j] != null)
                     this.arrGameObj[i][j].render(container);
@@ -514,8 +538,9 @@ function Cuphead()
 
     this.AttackOper = function()
     {
-        if(this.fAttackDelay > 300)
+        if(this.fAttackDelay > 100)
         {
+
             var bulletDir = Vec2(0, 0);
             var vOffset = Vec2(0, 0);
             switch(this.vDir)
@@ -584,6 +609,7 @@ function Cuphead()
 
     this.CreateBullet = function(_vPos, _vDir, _vDirFlag)
     {
+        
         var bullet = new Bullet(_vPos, _vDir, _vDirFlag);
         GameScene.arrGameObj[Obj_Type.Bullet].push(bullet);
     }
@@ -657,12 +683,16 @@ function Bullet(_vPos, _vDir, _vDirFlag)
             }
     
             if(this.CurrentAnim.name == "bullet_dead")
-                this.CurrentAnim.Animsprite.onComplete = () => {
+            {
+                if(this.CurrentAnim.IsFinish)
+                {
+                    console.log()
                     this.IsDead = true;
-                };    
+                }
+            }
+ 
             if(!this.CurrentAnim.Animsprite.destroyed)
                 this.CurrentAnim.Animsprite.position.set(this.vPos.x, this.vPos.y + (this.vScale.y / 2));    
-            console.log(this.CurrentAnim);
         }
     }
     this.render = function(container) 
@@ -719,23 +749,29 @@ function Animation(_Owner, _Name, _MaxFrame, _loop)
     this.MaxFrame = _MaxFrame;
     this.Animsprite = null;
     this.loop = _loop;
+    this.IsFinish = false;
 
     this.playAnim = function() 
     {
-        app.stage.addChild(this.Animsprite);
-        this.Animsprite.play();
-        this.Animsprite.animationSpeed = 0.25;
+        if(!this.Animsprite.destroyed)
+        {
+            app.stage.addChild(this.Animsprite);
+            this.Animsprite.play();
+            this.Animsprite.animationSpeed = 0.25;    
+        }
     }
 
     this.stopAnim = function() 
     {
         this.Animsprite.stop();
+        this.IsFinish = true;
         app.stage.removeChild(this.Animsprite);
     }
 
     this.destroyAnim = function() 
     {
         this.Animsprite.destroy();
+        this.IsFinish = true;
         app.stage.removeChild(this.Animsprite);
         //this.Owner.CurrentAnim = null;
     }
@@ -754,6 +790,7 @@ function Animation(_Owner, _Name, _MaxFrame, _loop)
         if(!this.loop)
         {
             this.Animsprite.onComplete = () => {
+                this.IsFinish = true;
                 this.destroyAnim();
             };    
         }
@@ -782,7 +819,7 @@ function Collider(_Owner, _Scale)
     {
         if(this.IsOn)
         {
-            container.addChild(this.rect);
+            //container.addChild(this.rect);
         }
     }
 
@@ -978,15 +1015,15 @@ floor.SetPos(512, 700);
 floor.CreateCollider(2048, 64);
 
 var wallTop = new Wall(Vec2(2048, 64));
-wallTop.SetPos(512, 30);
+wallTop.SetPos(512, -100);
 wallTop.CreateCollider(2048, 64);
 
 var wallLeft = new Wall(Vec2(50, 1024));
-wallLeft.SetPos(100, 350);
+wallLeft.SetPos(-100, 350);
 wallLeft.CreateCollider(50, 1024);
 
 var wallRight = new Wall(Vec2(50, 1024));
-wallRight.SetPos(1300, 350);
+wallRight.SetPos(1450, 350);
 wallRight.CreateCollider(50, 1024);
 
 
