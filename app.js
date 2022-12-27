@@ -104,27 +104,28 @@ function Vec2(_x, _y)
     return temp;
 }
 
-function GameObj () {
+class GameObj 
+{
+    constructor() {
+        this.name = "";
+        this.vPos =  Vec2(0, 0);
+        this.vScale = Vec2(0, 0);
+        this.Animations = [];
+        this.CurrentAnim = null;
+        this.Collider = null;
+        this.IsDead = false;
+    }
 
-    this.name = "";
-    this.vPos =  Vec2(0, 0);
-    this.vScale = Vec2(0, 0);
-    this.Animations = [];
-    this.CurrentAnim = null;
-    this.Collider = null;
-    this.IsDead = false;
-
-
-    this.SetPos = function(_x, _y) 
+    SetPos(_x, _y) 
     {
         this.vPos = Vec2(_x, _y);
     }
 
-    this.SetScake = function(_x, _y) 
+    SetScale(_x, _y) 
     {
         this.vScale = Vec2(_x, _y);
     }
-    this.update = function() 
+    update() 
     {
         if(null != this.CurrentAnim)
         {
@@ -133,12 +134,12 @@ function GameObj () {
         }
 
     }
-    this.render = function(container) 
+    render(container) 
     {
 
     }
 
-    this.CreateAnimation = function(name, path, maxframe, loop) 
+    CreateAnimation(name, path, maxframe, loop) 
     {
         const newAnim = new Animation(this, name, maxframe, loop);
 
@@ -152,7 +153,7 @@ function GameObj () {
         this.Animations.push(newAnim);
     }
 
-    this.playAnim = function(name)
+    playAnim(name)
     {
         for(var i =0; i< this.Animations.length; ++i)
         {
@@ -164,13 +165,13 @@ function GameObj () {
         }
     }
 
-    this.stopAnim = function()
+    stopAnim()
     {
         this.CurrentAnim.stopAnim();
         this.CurrentAnim = null;
     }
 
-    this.changeAnim = function(name)
+    changeAnim(name)
     {
         this.stopAnim();
         for(var i =0; i< this.Animations.length; ++i)
@@ -183,7 +184,7 @@ function GameObj () {
         }
     }
 
-    this.CreateCollider = function(_x, _y)
+    CreateCollider(_x, _y)
     {
         this.Collider = new Collider(this, Vec2(_x, _y));
         this.Collider.rect = new Graphics();
@@ -193,15 +194,15 @@ function GameObj () {
     }
 
 
-    this.OnCollisionEnter = function(_Other) 
+    OnCollisionEnter(_Other) 
     {
 
     }
-    this.OnCollision = function(_Other) 
+    OnCollision(_Other) 
     {
 
     }
-    this.OnCollisionExit = function(_Other) 
+    OnCollisionExit(_Other) 
     {
 
     }
@@ -218,24 +219,27 @@ const Obj_Type = {
 }
 
 
-function Scene () {
+class Scene
+{
+    constructor() {
+        this.arrGameObj = Array.from(new Array(Obj_Type.END), () => new Array(0));
+        this.Wintexture = PIXI.Texture.from('/DurumyJSEngine/images/bg/thekingsleap/Background/Windows/windows.png');
+        this.Farbgtexture = PIXI.Texture.from('/DurumyJSEngine/images/bg/thekingsleap/Background/Far/far_bg.png');
+        this.Columntexture = PIXI.Texture.from('/DurumyJSEngine/images/bg/thekingsleap/Background/Columns/columns.png');
+        this.Maintexture = PIXI.Texture.from('/DurumyJSEngine/images/bg/thekingsleap/Midground/Main.png');
+        this.Winsprite = new PIXI.Sprite(this.Wintexture);
+        this.Farbgsprite = new PIXI.Sprite(this.Farbgtexture);
+        this.Columnsprite = new PIXI.Sprite(this.Columntexture);
+        this.Mainsprite = new PIXI.Sprite(this.Maintexture);
+        this.Farbgsprite.scale.set(1.5);
+        this.Farbgsprite.x += 442;
+        this.Farbgsprite.y += 40;
+        this.Player = null;
+    //    this.Columnsprite.x += 300;
+        //[Obj_Type.END][255];
+    }
 
-    this.arrGameObj = Array.from(new Array(Obj_Type.END), () => new Array(0));
-    this.Wintexture = PIXI.Texture.from('/DurumyJSEngine/images/bg/thekingsleap/Background/Windows/windows.png');
-    this.Farbgtexture = PIXI.Texture.from('/DurumyJSEngine/images/bg/thekingsleap/Background/Far/far_bg.png');
-    this.Columntexture = PIXI.Texture.from('/DurumyJSEngine/images/bg/thekingsleap/Background/Columns/columns.png');
-    this.Maintexture = PIXI.Texture.from('/DurumyJSEngine/images/bg/thekingsleap/Midground/Main.png');
-    this.Winsprite = new PIXI.Sprite(this.Wintexture);
-    this.Farbgsprite = new PIXI.Sprite(this.Farbgtexture);
-    this.Columnsprite = new PIXI.Sprite(this.Columntexture);
-    this.Mainsprite = new PIXI.Sprite(this.Maintexture);
-    this.Farbgsprite.scale.set(1.5);
-    this.Farbgsprite.x += 442;
-    this.Farbgsprite.y += 40;
-//    this.Columnsprite.x += 300;
-    //[Obj_Type.END][255];
-
-    this.update = function() 
+    update() 
     {
         for(var i =0; i< this.arrGameObj.length; ++i)
         {
@@ -277,7 +281,7 @@ function Scene () {
             }
         }
     }
-    this.render = function(container) 
+    render(container) 
     {
        container.addChild(this.Farbgsprite);
        container.addChild(this.Winsprite);
@@ -302,21 +306,23 @@ function Scene () {
     }
 }
 
+class Cuphead extends GameObj 
+{
+    constructor() {
+        super();
+        this.name = "Player";
+        this.State = State.IDLE;
+        this.Onfloor = false;
+        this.vScale = Vec2(100, 100);
+        this.vDir = DIR.R;
+        this.vDirTemp = DIR.R;
+        this.fJumpTime = 0.0;
+        this.fAttackDelay = 0.0;
+        this.bStand = false;
+        this.bWatchRight = true;
+    }
 
-function Cuphead()
-{ 
-    this.name = "Player";
-    this.State = State.IDLE;
-    this.Onfloor = false;
-    this.vScale = Vec2(100, 100);
-    this.vDir = DIR.R;
-    this.vDirTemp = DIR.R;
-    this.fJumpTime = 0.0;
-    this.fAttackDelay = 0.0;
-    this.bStand = false;
-    this.bWatchRight = true;
-
-    this.update = function() 
+    update() 
     {
         if((this.State & State.JUMP) == State.JUMP)
         {
@@ -361,17 +367,17 @@ function Cuphead()
         {
             cuphead.changeAnim("cuphead_jump");
         }
-
         this.Move();
         this.Attack();
-        
+
+        super.update();
     }
-    this.render = function(container) 
+    render(container) 
     {
        // this.Anim.render(container);
     }
 
-    this.Move = function ()
+    Move()
     {
         key_left.press = () => {
             if(!this.bStand)
@@ -515,7 +521,7 @@ function Cuphead()
 
     }
     
-    this.Attack = function ()
+    Attack()
     {
         this.fAttackDelay += MS;
 
@@ -536,7 +542,7 @@ function Cuphead()
         }
     }
 
-    this.AttackOper = function()
+    AttackOper()
     {
         if(this.fAttackDelay > 100)
         {
@@ -586,7 +592,7 @@ function Cuphead()
         }
     }
 
-    this.OnCollisionEnter = function(_Other) 
+    OnCollisionEnter(_Other) 
     {
         if(_Other.Owner.name == "Floor")
         {
@@ -596,10 +602,10 @@ function Cuphead()
 
         }
     }
-    this.OnCollision = function(_Other) 
+    OnCollision(_Other) 
     {
     }
-    this.OnCollisionExit = function(_Other) 
+    OnCollisionExit(_Other) 
     {
         if(_Other.Owner.name == "Floor")
         {
@@ -607,72 +613,138 @@ function Cuphead()
         }
     }
 
-    this.CreateBullet = function(_vPos, _vDir, _vDirFlag)
+    CreateBullet(_vPos, _vDir, _vDirFlag)
     {
-        
         var bullet = new Bullet(_vPos, _vDir, _vDirFlag);
         GameScene.arrGameObj[Obj_Type.Bullet].push(bullet);
     }
 }
 
-
-
-function Bullet(_vPos, _vDir, _vDirFlag)
+class Monster extends GameObj 
 {
-    this.name = "Bullet";
-    this.vScale = Vec2(32, 32);
-    this.SetPos(_vPos.x, _vPos.y);
-    this.vDir = _vDir;
-    this.vDirFlag = _vDirFlag;
-    this.Animations= [];
-    this.CreateAnimation("bullet_create", "/DurumyJSEngine/images/bullet/create/bullet_create_", 4, false);
-    this.CreateAnimation("bullet", "/DurumyJSEngine/images/bullet/bullet/bullet_", 8, true);
-    this.CreateAnimation("bullet_dead", "/DurumyJSEngine/images/bullet/dead/bullet_dead_", 6, false);
-    this.CreateCollider(this, this.vSclae);
-    for(var i =0; i<this.Animations.length; ++i)
+    constructor() {
+        super();
+        this.name = "Monster";
+        this.State = State.IDLE;
+        this.Onfloor = false;
+        this.vScale = Vec2(100, 100);
+        this.fAttackDelay = 0.0;
+    }
+    
+    update() 
     {
-        this.Animations[i].Animsprite.animationSpeed = 5;
-        this.Animations[i].Animsprite.scale.set(0.5);
-        this.Animations[i].Animsprite.anchor.set(0.5, 0.5);
 
-        if((this.vDirFlag & DIR.L) == DIR.L)
+        this.Move();
+        this.Attack();
+        
+    }
+    render(container) 
+    {
+       // this.Anim.render(container);
+    }
+
+    Move()
+    {
+        this.CurrentAnim.Animsprite.position.set(this.vPos.x, this.vPos.y + (this.vScale.y / 2));
+    }
+    
+    Attack()
+    {
+       
+    }
+
+    AttackOper()
+    {
+        
+    }
+
+    OnCollisionEnter(_Other) 
+    {
+        if(_Other.Owner.name == "Floor")
         {
-            this.Animations[i].Animsprite.scale.x = -0.5;
-            if((this.vDirFlag & DIR.U) == DIR.U)
-            {
-                this.Animations[i].Animsprite.angle += 45;
-            }
-            else if((this.vDirFlag & DIR.D) == DIR.D)
-            {
-                this.Animations[i].Animsprite.angle -= 45;
-            }
-        }
-        else if((this.vDirFlag & DIR.R) == DIR.R)
-        {
-            this.Animations[i].Animsprite.scale.x = 0.5;
-            if((this.vDirFlag & DIR.U) == DIR.U)
-            {
-                this.Animations[i].Animsprite.angle -= 45;
-            }
-            else if((this.vDirFlag & DIR.D) == DIR.D)
-            {
-                this.Animations[i].Animsprite.angle += 45;
-            }
-        }
-        else if(this.vDirFlag == DIR.U)
-        {
-            this.Animations[i].Animsprite.angle -= 90;
-        }
-        else if(this.vDirFlag == DIR.D)
-        {
-            this.Animations[i].Animsprite.angle += 90;
+            this.State &= ~State.JUMP;
+            this.Onfloor = true;
+            this.fJumpTime = 0;
+
         }
     }
-    this.playAnim("bullet_create");
-    this.playAnim("bullet");
+    OnCollision(_Other) 
+    {
+    }
+    OnCollisionExit(_Other) 
+    {
+        if(_Other.Owner.name == "Floor")
+        {
+            this.Onfloor = false;
+        }
+    }
 
+    CreateBullet(_vPos, _vDir, _vDirFlag)
+    {
+        var bullet = new Bullet(_vPos, _vDir, _vDirFlag);
+        GameScene.arrGameObj[Obj_Type.Bullet].push(bullet);
+    }
+}
 
-    this.update = function()
+class Bullet extends GameObj 
+{
+    constructor(_vPos, _vDir, _vDirFlag) 
+    {
+        super();
+        this.name = "Bullet";
+        this.vScale = Vec2(32, 32);
+        this.SetPos(_vPos.x, _vPos.y);
+        this.vDir = _vDir;
+        this.vDirFlag = _vDirFlag;
+        this.Animations= [];
+        this.CreateAnimation("bullet_create", "/DurumyJSEngine/images/bullet/create/bullet_create_", 4, false);
+        this.CreateAnimation("bullet", "/DurumyJSEngine/images/bullet/bullet/bullet_", 8, true);
+        this.CreateAnimation("bullet_dead", "/DurumyJSEngine/images/bullet/dead/bullet_dead_", 6, false);
+        this.CreateCollider(this, this.vSclae);
+        for(var i =0; i<this.Animations.length; ++i)
+        {
+            this.Animations[i].Animsprite.animationSpeed = 5;
+            this.Animations[i].Animsprite.scale.set(0.5);
+            this.Animations[i].Animsprite.anchor.set(0.5, 0.5);
+
+            if((this.vDirFlag & DIR.L) == DIR.L)
+            {
+                this.Animations[i].Animsprite.scale.x = -0.5;
+                if((this.vDirFlag & DIR.U) == DIR.U)
+                {
+                    this.Animations[i].Animsprite.angle += 45;
+                }
+                else if((this.vDirFlag & DIR.D) == DIR.D)
+                {
+                    this.Animations[i].Animsprite.angle -= 45;
+                }
+            }
+            else if((this.vDirFlag & DIR.R) == DIR.R)
+            {
+                this.Animations[i].Animsprite.scale.x = 0.5;
+                if((this.vDirFlag & DIR.U) == DIR.U)
+                {
+                    this.Animations[i].Animsprite.angle -= 45;
+                }
+                else if((this.vDirFlag & DIR.D) == DIR.D)
+                {
+                    this.Animations[i].Animsprite.angle += 45;
+                }
+            }
+            else if(this.vDirFlag == DIR.U)
+            {
+                this.Animations[i].Animsprite.angle -= 90;
+            }
+            else if(this.vDirFlag == DIR.D)
+            {
+                this.Animations[i].Animsprite.angle += 90;
+            }
+        }
+        this.playAnim("bullet_create");
+        this.playAnim("bullet");
+    }
+
+    update()
     {
         if(null != this.CurrentAnim)
         {
@@ -695,63 +767,72 @@ function Bullet(_vPos, _vDir, _vDirFlag)
                 this.CurrentAnim.Animsprite.position.set(this.vPos.x, this.vPos.y + (this.vScale.y / 2));    
         }
     }
-    this.render = function(container) 
+    render(container) 
     {
     }
 
-    this.OnCollisionEnter = function(_Other) 
+    OnCollisionEnter(_Other) 
     {
         if(_Other.Owner.name == "Floor" || _Other.Owner.name == "Wall")
         {
             this.changeAnim("bullet_dead");
         }
     }
-    this.OnCollision = function(_Other) 
+    OnCollision(_Other) 
     {
     }
-    this.OnCollisionExit = function(_Other) 
+    OnCollisionExit(_Other) 
     {
 
     }
 }
 
-
-function Floor()
+class Floor  extends GameObj
 {
-    this.name = "Floor";
-    this.vScale = Vec2(2048, 64);
+    constructor()
+    {
+        super();
+        this.name = "Floor";
+        this.vScale = Vec2(2048, 64);    
+    }
 
-    this.update = function() 
+    update() 
     {
     }
-    this.render = function(container) 
-    {
-    }
-}
-function Wall(_vScale)
-{
-    this.name = "Wall";
-    this.vScale = _vScale;
-
-    this.update = function() 
-    {
-    }
-    this.render = function(container) 
+    render(container) 
     {
     }
 }
 
-function Animation(_Owner, _Name, _MaxFrame, _loop)
+class Wall extends GameObj
 {
-    this.Owner = _Owner
-    this.name = _Name;
-    this.Texture = [];
-    this.MaxFrame = _MaxFrame;
-    this.Animsprite = null;
-    this.loop = _loop;
-    this.IsFinish = false;
+    constructor(_vScale)
+    {
+        super();
+        this.name = "Wall";
+        this.vScale = _vScale;    
+    }
+    update() 
+    {
+    }
+    render(container) 
+    {
+    }
+}
 
-    this.playAnim = function() 
+class Animation
+{
+    constructor(_Owner, _Name, _MaxFrame, _loop)
+    {
+        this.Owner = _Owner
+        this.name = _Name;
+        this.Texture = [];
+        this.MaxFrame = _MaxFrame;
+        this.Animsprite = null;
+        this.loop = _loop;
+        this.IsFinish = false;    
+    }
+    playAnim() 
     {
         if(!this.Animsprite.destroyed)
         {
@@ -761,23 +842,21 @@ function Animation(_Owner, _Name, _MaxFrame, _loop)
         }
     }
 
-    this.stopAnim = function() 
+    stopAnim() 
     {
         this.Animsprite.stop();
         this.IsFinish = true;
         app.stage.removeChild(this.Animsprite);
     }
 
-    this.destroyAnim = function() 
+    destroyAnim() 
     {
         this.Animsprite.destroy();
         this.IsFinish = true;
         app.stage.removeChild(this.Animsprite);
         //this.Owner.CurrentAnim = null;
     }
-
-
-    this.CreateAnim = function(_x, _y)
+    CreateAnim(_x, _y)
     {
         this.Animsprite = new PIXI.AnimatedSprite(this.Texture);
         this.Animsprite.position.set(_x, _y + (this.Owner.vScale.y / 2));
@@ -785,7 +864,7 @@ function Animation(_Owner, _Name, _MaxFrame, _loop)
         this.Animsprite.loop = this.loop;
     }
 
-    this.update = function() 
+    update() 
     {
         if(!this.loop)
         {
@@ -797,17 +876,20 @@ function Animation(_Owner, _Name, _MaxFrame, _loop)
     }
 }
 
-function Collider(_Owner, _Scale)
+class Collider
 {
-    this.Owner = _Owner;
-    this.id = ++Col_id;
-    // 콜라이더의 위치는 owner의 위치에서 y를 Scale의 0.5만큼 빼야한다. (앵커때문)
-    this.vPos = this.Owner.vPos;
-    this.vScale = _Scale;
-    this.rect = null;
-    this.IsOn = true;
+    constructor(_Owner, _Scale)
+    {
+        this.Owner = _Owner;
+        this.id = ++Col_id;
+        // 콜라이더의 위치는 owner의 위치에서 y를 Scale의 0.5만큼 빼야한다. (앵커때문)
+        this.vPos = this.Owner.vPos;
+        this.vScale = _Scale;
+        this.rect = null;
+        this.IsOn = true;    
+    }
 
-    this.update = function() 
+    update() 
     {
         if(this.IsOn)
         {
@@ -815,7 +897,7 @@ function Collider(_Owner, _Scale)
         }
 //        this.rect.position.set(this.vPos.x, this.vPos.y)
     }
-    this.render = function(container) 
+    render(container) 
     {
         if(this.IsOn)
         {
@@ -823,18 +905,18 @@ function Collider(_Owner, _Scale)
         }
     }
 
-    this.OnCollisionEnter = function(_Other) 
+    OnCollisionEnter(_Other) 
     {
         if(this.IsOn)
             this.Owner.OnCollisionEnter(_Other);        
     }
-    this.OnCollision = function(_Other) 
+    OnCollision(_Other) 
     {
         if(this.IsOn)
             this.Owner.OnCollision(_Other);
     }
 
-    this.OnCollisionExit = function(_Other) 
+    OnCollisionExit(_Other) 
     {
         if(this.IsOn)
             this.Owner.OnCollisionExit(_Other);
@@ -842,14 +924,17 @@ function Collider(_Owner, _Scale)
 
 }
 
-function CollisionMgr(_GameScene)
+class CollisionMgr
 {    
-    this.GameScene = _GameScene
-    this.id;
-    this.mapColInfo = new Map();
-    this.arrCheck = [Obj_Type.END];
+    constructor(_GameScene)
+    {
+        this.GameScene = _GameScene
+        this.id;
+        this.mapColInfo = new Map();
+        this.arrCheck = [Obj_Type.END];    
+    }
 
-    this.update = function() 
+    update() 
     {
 
 
@@ -864,7 +949,7 @@ function CollisionMgr(_GameScene)
 
     }
 
-    this.CollisionCheck = function (_GroupTypeA, _GroupTypeB)
+    CollisionCheck(_GroupTypeA, _GroupTypeB)
     {
         const GroupA = GameScene.arrGameObj[_GroupTypeA];
         const GroupB = GameScene.arrGameObj[_GroupTypeB];
@@ -958,7 +1043,7 @@ function CollisionMgr(_GameScene)
     }
 
 
-    this.IsCollision = function (_colA, _colB)
+    IsCollision(_colA, _colB)
     {
         var vAPos = Vec2(_colA.vPos.x, _colA.vPos.y);
         var vAScale = Vec2(_colA.rect.width, _colA.rect.height);
@@ -976,7 +1061,7 @@ function CollisionMgr(_GameScene)
         return false;
     }
 
-    this.CheckGroup = function (Obj_TypeA, Obj_TypeB)
+    CheckGroup(Obj_TypeA, Obj_TypeB)
     {
         var row = Obj_TypeA;
         var col = Obj_TypeB;
@@ -995,12 +1080,6 @@ function CollisionMgr(_GameScene)
 }
 
 
-Cuphead.prototype = new GameObj();
-Floor.prototype = new GameObj();
-Wall.prototype = new GameObj();
-Bullet.prototype = new GameObj();
-
-
 var GameScene = new Scene();
 var collisionMgr = new CollisionMgr(GameScene);
 
@@ -1008,8 +1087,8 @@ var collisionMgr = new CollisionMgr(GameScene);
 // ObjInit
 var cuphead = new Cuphead();
 cuphead.SetPos(100, 100);
-cuphead.CreateCollider(100, 100)
-;
+cuphead.CreateCollider(100, 100);
+
 var floor = new Floor();
 floor.SetPos(512, 700);
 floor.CreateCollider(2048, 64);
@@ -1028,6 +1107,7 @@ wallRight.CreateCollider(50, 1024);
 
 
 // 애니메이션 추가
+// player
 cuphead.CreateAnimation("cuphead_idle", "/DurumyJSEngine/images/cuphead_idle/cuphead_idle_", 9 , true);
 cuphead.CreateAnimation("cuphead_run", "/DurumyJSEngine/images/cuphead_run/cuphead_run_", 16, true);
 cuphead.CreateAnimation("cuphead_run_shoot_str", "/DurumyJSEngine/images/cuphead_run/shooting/cuphead_run_shoot_", 16, true);
@@ -1041,13 +1121,18 @@ cuphead.CreateAnimation("cuphead_aim_diagonal_down", "/DurumyJSEngine/images/cup
 
 cuphead.playAnim("cuphead_idle");
 
+// hocuspocus
+cuphead.CreateAnimation("hopuspocus_idle", "/DurumyJSEngine/images/hopuspocus/Idle/kingdice_rabbit_idle_", 20 , true);
+cuphead.CreateAnimation("hopuspocus_attack", "/DurumyJSEngine/images/hopuspocus/Attack/kingdice_rabbit_attack_", 35 , false);
+
+
 // OBj추가
 GameScene.arrGameObj[Obj_Type.Floor].push(floor);
 GameScene.arrGameObj[Obj_Type.Wall].push(wallTop);
 GameScene.arrGameObj[Obj_Type.Wall].push(wallLeft);
 GameScene.arrGameObj[Obj_Type.Wall].push(wallRight);
 GameScene.arrGameObj[Obj_Type.Player].push(cuphead);
-
+GameScene.Player = cuphead;
 
 
 
