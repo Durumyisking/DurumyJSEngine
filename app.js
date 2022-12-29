@@ -214,7 +214,8 @@ const Obj_Type = {
     Floor: 0,
     Wall: 1,
     Player: 2,
-    Bullet: 3,
+    Monster: 3,
+    Bullet: 4,
     END: 10,
 }
 
@@ -320,6 +321,9 @@ class Cuphead extends GameObj
         this.fAttackDelay = 0.0;
         this.bStand = false;
         this.bWatchRight = true;
+
+        this.SetPos(100, 100);
+        this.CreateCollider(100, 100);
     }
 
     update() 
@@ -348,24 +352,24 @@ class Cuphead extends GameObj
         switch(this.State)
         {
             case State.IDLE:
-                cuphead.changeAnim("cuphead_idle");
+                this.changeAnim("cuphead_idle");
                 break;
             case State.JUMP:
-                cuphead.changeAnim("cuphead_jump");
+                this.changeAnim("cuphead_jump");
                 break;    
             case State.MOVE:
-                cuphead.changeAnim("cuphead_run");
+                this.changeAnim("cuphead_run");
                 break;
             case State.ATTACK:
-                cuphead.changeAnim("cuphead_aim_str");
+                this.changeAnim("cuphead_aim_str");
                 break;
             case State.ATTACK | State.MOVE:
-                cuphead.changeAnim("cuphead_run_shoot_str");
+                this.changeAnim("cuphead_run_shoot_str");
                 break;
         }
         if((this.State & State.JUMP) == State.JUMP)
         {
-            cuphead.changeAnim("cuphead_jump");
+            this.changeAnim("cuphead_jump");
         }
         this.Move();
         this.Attack();
@@ -420,24 +424,24 @@ class Cuphead extends GameObj
             if(key_up.isDown)
             {
                 if(this.bStand && (key_left.isDown || key_right.isDown))
-                    cuphead.changeAnim("cuphead_aim_diagonal_up");
+                   this.changeAnim("cuphead_aim_diagonal_up");
                 else if((this.State & State.MOVE) == State.MOVE)
-                    cuphead.changeAnim("cuphead_run_shoot_diagonal");
+                    this.changeAnim("cuphead_run_shoot_diagonal");
                 else
-                    cuphead.changeAnim("cuphead_aim_up");
+                    this.changeAnim("cuphead_aim_up");
             }
             if(key_down.isDown)
             {
                 if(this.bStand && (key_left.isDown || key_right.isDown))
-                    cuphead.changeAnim("cuphead_aim_diagonal_down");
+                    this.changeAnim("cuphead_aim_diagonal_down");
                 else
-                    cuphead.changeAnim("cuphead_aim_down");
+                    this.changeAnim("cuphead_aim_down");
             }
             
             if(key_up.isUp && key_down.isUp)
             {
                 if(!(this.State & State.MOVE) == State.MOVE)
-                    cuphead.changeAnim("cuphead_aim_str");
+                    this.changeAnim("cuphead_aim_str");
             }
         }
 
@@ -629,11 +633,11 @@ class Monster extends GameObj
         this.Onfloor = false;
         this.vScale = Vec2(100, 100);
         this.fAttackDelay = 0.0;
+        this.Hp = 0;
     }
     
     update() 
     {
-
         this.Move();
         this.Attack();
         
@@ -685,6 +689,88 @@ class Monster extends GameObj
         GameScene.arrGameObj[Obj_Type.Bullet].push(bullet);
     }
 }
+
+class Hopuspocus extends Monster 
+{
+    constructor() {
+        super();
+        this.State = State.IDLE;
+        this.Onfloor = false;
+        this.vScale = Vec2(400, 700);
+        this.fAttackDelay = 0.0;
+        this.Hp = 10;
+
+        this.SetPos(900, 350);
+        this.CreateCollider(100, 450);
+        this.Collider.SetOffset(Vec2(0, 50))
+    }
+    
+    update() 
+    {
+        console.log(this);
+        switch(this.State)
+        {
+            case State.IDLE:
+                this.changeAnim("hopuspocus_idle");
+                break;
+
+        }
+        this.Move();
+        this.Attack();
+        
+        super.update();
+    }
+    render(container) 
+    {
+       // this.Anim.render(container);
+       super.render(container);
+    }
+
+    Move()
+    {
+    }
+    
+    Attack()
+    {
+       
+    }
+
+    AttackOper()
+    {
+        
+    }
+
+    OnCollisionEnter(_Other) 
+    {
+        if(_Other.Owner.name == "Floor")
+        {
+            this.State &= ~State.JUMP;
+            this.Onfloor = true;
+            this.fJumpTime = 0;
+        }
+        if(_Other.Owner.name == "Bullet")
+        {
+            console.log("hit!");
+        }
+    }
+    OnCollision(_Other) 
+    {
+    }
+    OnCollisionExit(_Other) 
+    {
+        if(_Other.Owner.name == "Floor")
+        {
+            this.Onfloor = false;
+        }
+    }
+
+    CreateBullet(_vPos, _vDir, _vDirFlag)
+    {
+        var bullet = new Bullet(_vPos, _vDir, _vDirFlag);
+        GameScene.arrGameObj[Obj_Type.Bullet].push(bullet);
+    }
+}
+
 
 class Bullet extends GameObj 
 {
@@ -773,7 +859,7 @@ class Bullet extends GameObj
 
     OnCollisionEnter(_Other) 
     {
-        if(_Other.Owner.name == "Floor" || _Other.Owner.name == "Wall")
+        if(_Other.Owner.name == "Floor" || _Other.Owner.name == "Wall" || _Other.Owner.name == "Monster")
         {
             this.changeAnim("bullet_dead");
         }
@@ -884,6 +970,7 @@ class Collider
         this.id = ++Col_id;
         // 콜라이더의 위치는 owner의 위치에서 y를 Scale의 0.5만큼 빼야한다. (앵커때문)
         this.vPos = this.Owner.vPos;
+        this.vOffset = Vec2(0, 0);
         this.vScale = _Scale;
         this.rect = null;
         this.IsOn = true;    
@@ -893,7 +980,7 @@ class Collider
     {
         if(this.IsOn)
         {
-            this.vPos = Vec2(this.Owner.vPos.x, this.Owner.vPos.y);
+            this.vPos = Vec2(this.Owner.vPos.x + this.vOffset.x, this.Owner.vPos.y + this.vOffset.y);
         }
 //        this.rect.position.set(this.vPos.x, this.vPos.y)
     }
@@ -920,6 +1007,11 @@ class Collider
     {
         if(this.IsOn)
             this.Owner.OnCollisionExit(_Other);
+    }
+
+    SetOffset(_vOffset)
+    {
+        this.vOffset = _vOffset;
     }
 
 }
@@ -1086,8 +1178,10 @@ var collisionMgr = new CollisionMgr(GameScene);
 
 // ObjInit
 var cuphead = new Cuphead();
-cuphead.SetPos(100, 100);
-cuphead.CreateCollider(100, 100);
+
+
+var hopuspocus = new Hopuspocus();
+
 
 var floor = new Floor();
 floor.SetPos(512, 700);
@@ -1122,8 +1216,12 @@ cuphead.CreateAnimation("cuphead_aim_diagonal_down", "/DurumyJSEngine/images/cup
 cuphead.playAnim("cuphead_idle");
 
 // hocuspocus
-cuphead.CreateAnimation("hopuspocus_idle", "/DurumyJSEngine/images/hopuspocus/Idle/kingdice_rabbit_idle_", 20 , true);
-cuphead.CreateAnimation("hopuspocus_attack", "/DurumyJSEngine/images/hopuspocus/Attack/kingdice_rabbit_attack_", 35 , false);
+hopuspocus.CreateAnimation("hopuspocus_idle", "/DurumyJSEngine/images/boss/hopuspocus/Idle/kingdice_rabbit_idle_", 20 , true);
+hopuspocus.CreateAnimation("hopuspocus_attack", "/DurumyJSEngine/images/boss/hopuspocus/Attack/kingdice_rabbit_attack_", 35 , false);
+
+hopuspocus.playAnim("hopuspocus_idle");
+hopuspocus.CurrentAnim.Animsprite.scale.x = 0.7;
+hopuspocus.CurrentAnim.Animsprite.scale.y = 0.7;
 
 
 // OBj추가
@@ -1132,6 +1230,7 @@ GameScene.arrGameObj[Obj_Type.Wall].push(wallTop);
 GameScene.arrGameObj[Obj_Type.Wall].push(wallLeft);
 GameScene.arrGameObj[Obj_Type.Wall].push(wallRight);
 GameScene.arrGameObj[Obj_Type.Player].push(cuphead);
+GameScene.arrGameObj[Obj_Type.Monster].push(hopuspocus);
 GameScene.Player = cuphead;
 
 
